@@ -1,0 +1,14 @@
+set_global_assignment -name QIP_FILE rtl/jt89/jt89.qip
+set_global_assignment -name VERILOG_FILE rtl/t65/T65_ALU.v
+set_global_assignment -name VERILOG_FILE rtl/t65/T65_MCode.v
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/t65/t65_pack.v
+set_global_assignment -name VERILOG_FILE rtl/t65/t65.v
+set_global_assignment -name VERILOG_FILE rtl/clk_en.v
+set_global_assignment -name VERILOG_FILE rtl/core.v
+set_global_assignment -name VERILOG_FILE rtl/dpram.v
+set_global_assignment -name VERILOG_FILE rtl/gfx.v
+set_global_assignment -name VERILOG_FILE rtl/ram.v
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/spram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Chameleon.sv
+set_global_assignment -name VERILOG_FILE rtl/video.v
+
