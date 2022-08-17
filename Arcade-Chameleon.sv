@@ -205,6 +205,9 @@ localparam CONF_STR = {
   "O[2],TV Mode,NTSC,PAL;",
   "O[4:3],Noise,White,Red,Green,Blue;",
   "-;",
+  "DIP;",
+  "-;",
+  "O[7:6],Audio,Both,Fx,Music,None;",
   "T[0],Reset;",
   "R[0],Reset and close OSD;",
   "V,v",`BUILD_DATE
@@ -222,8 +225,13 @@ wire        ioctl_download;
 wire  [7:0] ioctl_index;
 wire        ioctl_wait;
 
-wire [15:0] joy_0;
-wire [15:0] joy_1;
+wire [15:0] j0;
+wire [15:0] j1;
+
+reg [7:0] sw[8];
+always @(posedge clk_sys)
+  if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[24:3]) sw[ioctl_addr[2:0]] <= ioctl_dout;
+
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -238,8 +246,8 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
   .status(status),
   .status_menumask({status[5]}),
 
-  .joystick_0(joy_0),
-  .joystick_1(joy_1),
+  .joystick_0(j0),
+  .joystick_1(j1),
   .ps2_key(ps2_key),
 
   .ioctl_download(ioctl_download),
@@ -293,7 +301,7 @@ video video(
   .vcount ( vcount  )
 );
 
-/******** VRAM BUFFER ********/
+/******** VRAM FRAME BUFFERS ********/
 
 wire [7:0] hh, vv;
 wire [2:0] red, green;
@@ -323,24 +331,32 @@ end
 
 wire signed [10:0] sound1;
 wire signed [10:0] sound2;
-wire signed [15:0] mix = sound1 + sound2;
 
 assign AUDIO_S = 1'b1;
-assign AUDIO_L = mix;
-assign AUDIO_R = mix;
-assign AUDIO_MIX = 0;
+assign AUDIO_L = ~status[6] ? { sound1, 2'd0 } : 16'd0;
+assign AUDIO_R = ~status[7] ? { sound2, 2'd0 } : 16'd0;
+assign AUDIO_MIX = 2'd3;
 
 /******** CORE ********/
+
+wire core_download = ioctl_download && (ioctl_index==0);
+
+wire coinA = ~j0[8];
+wire coinB = ~j0[9];
+wire startA = j0[4];
+wire startB = j1[4];
+
+wire [7:0] p2 = { startA, startB, coinA, coinB, sw[1][3:0] };
 
 core u_core(
   .reset          ( reset          ),
   .clk_sys        ( clk_sys        ),
-  .j1             ( j1             ),
-  .j2             ( j2             ),
-  .p1             ( p1             ),
+  .j1             ( j0             ),
+  .j2             ( j1             ),
+  .p1             ( sw[0]          ),
   .p2             ( p2             ),
   .ioctl_index    ( ioctl_index    ),
-  .ioctl_download ( ioctl_download ),
+  .ioctl_download ( core_download  ),
   .ioctl_addr     ( ioctl_addr     ),
   .ioctl_dout     ( ioctl_dout     ),
   .ioctl_wr       ( ioctl_wr       ),

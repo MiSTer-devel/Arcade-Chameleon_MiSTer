@@ -28,14 +28,11 @@ always @(posedge clk) begin
       vcount <= vcount + 9'd1;
       hcount <= 9'b0;
       case (vcount)
-        224: vb <= 1'b1;
+         16: vb <= 1'b0;
+        239: vb <= 1'b1;
         242: vs <= 1'b0;
         245: vs <= 1'b1;
-        262: begin
-          frame <= 1'b1;
-          vcount <= 9'd0;
-          vb <= 1'b0;
-        end
+        262: vcount <= 9'd0;
       endcase
     end
   endcase

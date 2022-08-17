@@ -8,9 +8,9 @@ module core(
   input [7:0] p1,
   input [7:0] p2,
 
-  input        ioctl_index,
+  input [7:0]  ioctl_index,
   input        ioctl_download,
-  input [25:0] ioctl_addr,
+  input [26:0] ioctl_addr,
   input [15:0] ioctl_dout,
   input        ioctl_wr,
 
@@ -28,25 +28,20 @@ module core(
   input vs
 );
 
-// 42MHz clock
-// 42/6 = 7
-// 42/7 = 6
-
-// todo:
-// 6502 = 18mhz/24 (yes it's 750khz)
-// 2x AY8910 = 18mhz/12
-
 /******** CLOCKS ********/
 
+// AUDIO CPU: 0.6MHz from MAME, too slow comparing to the original game
+// MAIN CPU: 0.7MHz, good
+// SN89: 2MHz, not sure
 wire clk_en_6, clk_en_7, clk_en_2;
-clk_en #(5)  mcpu_clk_en(clk_sys, clk_en_7);
-clk_en #(6)  acpu_clk_en(clk_sys, clk_en_6);
-clk_en #(27) sn89_clk_en(clk_sys, clk_en_2);
+clk_en #(56) mcpu_clk_en(clk_sys, clk_en_7);
+clk_en #(69) acpu_clk_en(clk_sys, clk_en_6);
+clk_en #(20) sn89_clk_en(clk_sys, clk_en_2);
 
 /******** MCPU ********/
 
 reg   [7:0] mcpu_din;
-wire        mcpu_nmi_n;
+reg         mcpu_nmi_n;
 wire [15:0] mcpu_addr;
 wire  [7:0] mcpu_dout;
 wire        mcpu_rw_n;
@@ -112,8 +107,8 @@ spram mcpu_spr_ram(
 
 wire bt14 = mcpu_addr[14] & ~mcpu_addr[15];
 wire  [7:0] mcpu_rom_data  = ioctl_dout;
-wire [15:0] mcpu_rom_addr  = ioctl_download ? ioctl_addr + 24'h4000 : { mcpu_addr[15], bt14, mcpu_addr[13:0] };
-wire        mcu_rom_wren_a = ioctl_download && ioctl_addr < 24'h8000 ? ioctl_wr : 1'b0;
+wire [15:0] mcpu_rom_addr  = ioctl_download ? ioctl_addr + 27'h4000 : { mcpu_addr[15], bt14, mcpu_addr[13:0] };
+wire        mcu_rom_wren_a = ioctl_download && ioctl_addr < 27'h8000 ? ioctl_wr : 1'b0;
 
 dpram #(16,8) mcpu_rom(
   .clock     ( clk_sys                 ),
@@ -135,11 +130,19 @@ reg [7:0] io_data;
 reg [7:0] old_p2;
 reg [7:0] snd_latch;
 
-assign mcpu_nmi_n = ~(p2 != old_p2);
-
-always @(posedge clk_en_7)
+// generate a NMI on coin insertion & start buttons
+// p2[7:6]=start A/B, p2[5:4]=coin A/B
+// Is NMI only triggered on coin insertion?
+reg [3:0] hold_nmi;
+always @(posedge clk_sys) begin
   old_p2 <= p2;
-
+  if (p2[7:4] != old_p2[7:4]) begin
+    mcpu_nmi_n <= 1'b0;
+    hold_nmi <= 4'd15;
+  end
+  if (~mcpu_nmi_n) hold_nmi <= hold_nmi - 4'd1;
+  if (~|hold_nmi & ~mcpu_nmi_n) mcpu_nmi_n <= 1'b1;
+end
 
 always @(posedge clk_sys) begin
   if (mcpu_io) begin
@@ -163,10 +166,11 @@ end
 /******** MCPU DATA BUS ********/
 
 always @(posedge clk_sys)
-  mcpu_din <=
-    mcpu_io     ? io_data    :
-    mcpu_ram_en ? mcpu_ram_q :
-    mcpu_rom_en ? mcpu_rom_q : 8'd0;
+  if (mcpu_rw_n)
+    mcpu_din <=
+      mcpu_io     ? io_data    :
+      mcpu_ram_en ? mcpu_ram_q :
+      mcpu_rom_en ? mcpu_rom_q : 8'd0;
 
 /******** ACPU ********/
 
@@ -222,13 +226,13 @@ wire  [7:0] acpu_rom1_data = ioctl_dout;
 wire  [7:0] acpu_rom2_data = ioctl_dout;
 wire  [7:0] acpu_rom3_data = ioctl_dout;
 
-wire [11:0] acpu_rom1_addr = ioctl_download ? ioctl_addr - 24'h8000 : acpu_addr[11:0];
-wire [11:0] acpu_rom2_addr = ioctl_download ? ioctl_addr - 24'h9000 : acpu_addr[11:0];
-wire [11:0] acpu_rom3_addr = ioctl_download ? ioctl_addr - 24'ha000 : acpu_addr[11:0];
+wire [11:0] acpu_rom1_addr = ioctl_download ? ioctl_addr - 27'h8000 : acpu_addr[11:0];
+wire [11:0] acpu_rom2_addr = ioctl_download ? ioctl_addr - 27'h9000 : acpu_addr[11:0];
+wire [11:0] acpu_rom3_addr = ioctl_download ? ioctl_addr - 27'ha000 : acpu_addr[11:0];
 
-wire acpu_rom1_wren_a = ioctl_download && ioctl_addr >= 24'h8000 && ioctl_addr < 24'h9000 ? ioctl_wr : 1'b0;
-wire acpu_rom2_wren_a = ioctl_download && ioctl_addr >= 24'h9000 && ioctl_addr < 24'ha000 ? ioctl_wr : 1'b0;
-wire acpu_rom3_wren_a = ioctl_download && ioctl_addr >= 24'ha000 && ioctl_addr < 24'hb000 ? ioctl_wr : 1'b0;
+wire acpu_rom1_wren_a = ioctl_download && ioctl_addr >= 27'h8000 && ioctl_addr < 27'h9000 ? ioctl_wr : 1'b0;
+wire acpu_rom2_wren_a = ioctl_download && ioctl_addr >= 27'h9000 && ioctl_addr < 27'ha000 ? ioctl_wr : 1'b0;
+wire acpu_rom3_wren_a = ioctl_download && ioctl_addr >= 27'ha000 && ioctl_addr < 27'hb000 ? ioctl_wr : 1'b0;
 
 wire acpu_rom1_en = acpu_rw_n & acpu_rom_en & acpu_rom_sel == 2'd1;
 wire acpu_rom2_en = acpu_rw_n & acpu_rom_en & acpu_rom_sel == 2'd2;
@@ -278,9 +282,9 @@ dpram #(12,8) acpu_rom3(
 
 /******** ACPU I/O ********/
 
-reg [7:0] acpu_io_data;
-reg [7:0] sn89_data;
-reg [1:0] sn89_sel;
+reg  [7:0] acpu_io_data;
+reg  [7:0] sn89_data;
+reg  [1:0] sn89_sel;
 wire [1:0] snd_status;
 
 always @(posedge clk_sys) begin
@@ -298,12 +302,8 @@ always @(posedge clk_sys) begin
           acpu_dout[7]
         };
       3'd1: if (~acpu_rw_n) sn89_sel <= acpu_dout[1:0];
-      3'd2: /* ??? */;
-      3'd3: /* ??? */;
       3'd4: acpu_io_data <= snd_status;
       3'd5: acpu_io_data <= snd_latch;
-      3'd6: /* ??? */;
-      3'd7: /* ??? */;
     endcase
   end
 end
@@ -318,7 +318,7 @@ wire jt89_1_wr_n = ~(old_sn89_sel[0] & ~sn89_sel[0]);
 wire jt89_2_wr_n = ~(old_sn89_sel[1] & ~sn89_sel[1]);
 
 always @(posedge clk_sys)
-  if (clk_en_2) old_sn89_sel <= sn89_sel;
+  old_sn89_sel <= sn89_sel;
 
 jt89 jt89_1(
   .clk    ( clk_sys     ),
@@ -344,12 +344,13 @@ jt89 jt89_2(
 /******** ACPU DATA BUS ********/
 
 always @(posedge clk_sys)
-  acpu_din <=
-    acpu_io      ? acpu_io_data :
-    acpu_ram_en  ? acpu_ram_q   :
-    acpu_rom1_en ? acpu_rom1_q  :
-    acpu_rom2_en ? acpu_rom2_q  :
-    acpu_rom3_en ? acpu_rom3_q  : 8'd0;
+  if (acpu_rw_n)
+    acpu_din <=
+      acpu_io      ? acpu_io_data :
+      acpu_ram_en  ? acpu_ram_q   :
+      acpu_rom1_en ? acpu_rom1_q  :
+      acpu_rom2_en ? acpu_rom2_q  :
+      acpu_rom3_en ? acpu_rom3_q  : 8'd0;
 
 
 /********* GFX ********/
@@ -390,10 +391,10 @@ gfx gfx(
 /******** GFX ROMs ********/
 
 wire  [7:0] gfx_rom_data    = ioctl_dout;
-wire [12:0] gfx_rom1_addr   = ioctl_download ? ioctl_addr - 24'hb000 : gfx1_addr;
-wire [12:0] gfx_rom2_addr   = ioctl_download ? ioctl_addr - 24'hd000 : gfx2_addr;
-wire        gfx_rom1_wren_a = ioctl_download && ioctl_addr >= 24'hb000 && ioctl_addr < 24'hd000 ? ioctl_wr : 1'b0;
-wire        gfx_rom2_wren_a = ioctl_download && ioctl_addr >= 24'hd000 && ioctl_addr < 24'hf000 ? ioctl_wr : 1'b0;
+wire [12:0] gfx_rom1_addr   = ioctl_download ? ioctl_addr - 27'hb000 : gfx1_addr;
+wire [12:0] gfx_rom2_addr   = ioctl_download ? ioctl_addr - 27'hd000 : gfx2_addr;
+wire        gfx_rom1_wren_a = ioctl_download && ioctl_addr >= 27'hb000 && ioctl_addr < 27'hd000 ? ioctl_wr : 1'b0;
+wire        gfx_rom2_wren_a = ioctl_download && ioctl_addr >= 27'hd000 && ioctl_addr < 27'hf000 ? ioctl_wr : 1'b0;
 
 dpram #(13,8) gfx_rom1(
   .clock     ( clk_sys         ),
@@ -416,8 +417,8 @@ dpram #(13,8) gfx_rom2(
 /******** COLOR ROMs ********/
 
 wire [7:0] col_rom_data   = ioctl_dout;
-wire [5:0] col_rom_addr_a = ioctl_download ? ioctl_addr - 24'hf000 : color_index;
-wire       col_rom_wren_a = ioctl_download && ioctl_addr >= 24'hf000 ? ioctl_wr : 1'b0;
+wire [5:0] col_rom_addr_a = ioctl_download ? ioctl_addr - 27'hf000 : color_index;
+wire       col_rom_wren_a = ioctl_download && ioctl_addr >= 27'hf000 ? ioctl_wr : 1'b0;
 
 dpram #(6,8) col_rom(
   .clock     ( clk_sys        ),

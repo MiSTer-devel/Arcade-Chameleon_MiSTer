@@ -14,12 +14,12 @@ module gfx(
   output reg  [5:0] color_index,
   input       [7:0] color_data,
   input             bank,
-  
+
   output reg  [2:0] r, g,
   output reg  [1:0] b,
   output reg        done,
   output reg        frame,
-  
+
   input             h_flip,
   input             v_flip
 );
@@ -82,21 +82,23 @@ always @(posedge clk) begin
         state <= 4'd0;
       end
     end
-    4'd7: state <= next;
-    
+
+    4'd6: state <= next;
+    4'd7: state <= 4'd6;
+
     // sprites
     4'd8: begin
-      gfx1_addr <= { bank, spr_data[13:8] } * 32 + px[3]*8 + py[3]*8 + { py[3:1], py[0] } + 13'h1000;
-      gfx2_addr <= { bank, spr_data[13:8] } * 32 + px[3]*8 + py[3]*8 + { py[3:1], py[0] } + 13'h1000;
+      gfx1_addr <= { bank, spr_data[13:8] } * 13'd32 + px[3]*13'd8 + py[3]*13'd8 + { py[3:1], py[0] } + 13'h1000;
+      gfx2_addr <= { bank, spr_data[13:8] } * 13'd32 + px[3]*13'd8 + py[3]*13'd8 + { py[3:1], py[0] } + 13'h1000;
       done <= 1'b0;
-      hh <= spr_data[31:24] + (spr_data[14] ? 15 - px : px);
-      vv <= 240 - spr_data[7:0] + (spr_data[15] ? 15 - py : py);
+      hh <= spr_data[31:24] + (spr_data[14] ? 8'd15 - px : px);
+      vv <= 8'd240 - spr_data[7:0] + (spr_data[15] ? 8'd15 - py : py);
       next <= 4'd9;
       state <= 4'd7;
     end
     4'd9: begin
       done <= 1'b0;
-      color_index[5:2] <= spr_data[19:16];// pxdt3 | pxdt4 ? spr_data[19:16] : 4'd0;
+      color_index[5:2] <= spr_data[19:16];
       color_index[1:0] <= { pxdt3, pxdt4 };
       next <= 4'd10;
       state <= 4'd7;
@@ -112,7 +114,7 @@ always @(posedge clk) begin
       px <= px + 4'd1;
       if (px == 4'd15) py <= py + 4'd1;
       if (px == 4'd15 && py == 4'd15) begin
-        spr_addr <= spr_addr - 1;
+        spr_addr <= spr_addr - 5'd1;
         next <= 4'd8;
         state <= 4'd7;
         if (spr_addr == 0) begin
@@ -123,7 +125,7 @@ always @(posedge clk) begin
         end
       end
     end
-    
+
   endcase
 end
 
