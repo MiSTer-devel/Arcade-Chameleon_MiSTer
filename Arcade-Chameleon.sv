@@ -225,8 +225,8 @@ wire        ioctl_download;
 wire  [7:0] ioctl_index;
 wire        ioctl_wait;
 
-wire [15:0] j0;
-wire [15:0] j1;
+wire [15:0] joy0;
+wire [15:0] joy1;
 
 reg [7:0] sw[8];
 always @(posedge clk_sys)
@@ -246,8 +246,8 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
   .status(status),
   .status_menumask({status[5]}),
 
-  .joystick_0(j0),
-  .joystick_1(j1),
+  .joystick_0(joy0),
+  .joystick_1(joy1),
   .ps2_key(ps2_key),
 
   .ioctl_download(ioctl_download),
@@ -341,18 +341,20 @@ assign AUDIO_MIX = 2'd3;
 
 wire core_download = ioctl_download && (ioctl_index==0);
 
-wire coinA = ~j0[8];
-wire coinB = ~j0[9];
-wire startA = j0[4];
-wire startB = j1[4];
+wire coinA = ~joy0[6];
+wire coinB = ~joy0[7];
+wire startA = joy0[5];
+wire startB = joy0[4];
 
 wire [7:0] p2 = { startA, startB, coinA, coinB, sw[1][3:0] };
+wire [7:0] j1 = { 3'b0, joy0[5], joy0[2], joy0[3], joy0[1], joy0[0] };
+wire [7:0] j2 = { 3'b0, joy1[5], joy1[2], joy1[3], joy1[1], joy1[0] };
 
 core u_core(
   .reset          ( reset          ),
   .clk_sys        ( clk_sys        ),
-  .j1             ( j0             ),
-  .j2             ( j1             ),
+  .j1             ( j1             ),
+  .j2             ( j2             ),
   .p1             ( sw[0]          ),
   .p2             ( p2             ),
   .ioctl_index    ( ioctl_index    ),

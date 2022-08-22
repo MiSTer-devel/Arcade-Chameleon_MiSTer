@@ -32,11 +32,11 @@ module core(
 
 // AUDIO CPU: 0.6MHz from MAME, too slow comparing to the original game
 // MAIN CPU: 0.7MHz, good
-// SN89: 2MHz, not sure
+// SN89: 3.5MHz, not sure!
 wire clk_en_6, clk_en_7, clk_en_2;
 clk_en #(56) mcpu_clk_en(clk_sys, clk_en_7);
 clk_en #(69) acpu_clk_en(clk_sys, clk_en_6);
-clk_en #(20) sn89_clk_en(clk_sys, clk_en_2);
+clk_en #(11) sn89_clk_en(clk_sys, clk_en_2);
 
 /******** MCPU ********/
 
@@ -133,14 +133,14 @@ reg [7:0] snd_latch;
 // generate a NMI on coin insertion & start buttons
 // p2[7:6]=start A/B, p2[5:4]=coin A/B
 // Is NMI only triggered on coin insertion?
-reg [3:0] hold_nmi;
-always @(posedge clk_sys) begin
+reg [1:0] hold_nmi;
+always @(posedge clk_en_7) begin
   old_p2 <= p2;
-  if (p2[7:4] != old_p2[7:4]) begin
+  if (p2[5:4] != old_p2[5:4]) begin
     mcpu_nmi_n <= 1'b0;
-    hold_nmi <= 4'd15;
+    hold_nmi <= 2'd3;
   end
-  if (~mcpu_nmi_n) hold_nmi <= hold_nmi - 4'd1;
+  if (~mcpu_nmi_n) hold_nmi <= hold_nmi - 2'd1;
   if (~|hold_nmi & ~mcpu_nmi_n) mcpu_nmi_n <= 1'b1;
 end
 
@@ -308,36 +308,65 @@ always @(posedge clk_sys) begin
   end
 end
 
-/******** JT89 (SN76489) ********/
+/******** SN76489 ********/
 
 wire sn89_1_rdy, sn89_2_rdy;
 assign snd_status = { sn89_1_rdy, sn89_2_rdy };
 
 reg [1:0] old_sn89_sel;
-wire jt89_1_wr_n = ~(old_sn89_sel[0] & ~sn89_sel[0]);
-wire jt89_2_wr_n = ~(old_sn89_sel[1] & ~sn89_sel[1]);
 
-always @(posedge clk_sys)
+reg sn89m_ce_n, sn89m_we_n;
+reg sn89s_ce_n, sn89s_we_n;
+
+always @(posedge clk_sys) begin
   old_sn89_sel <= sn89_sel;
+  if (old_sn89_sel[0] & ~sn89_sel[0]) begin
+    sn89m_ce_n <= 1'b0;
+  end
+  if (old_sn89_sel[1] & ~sn89_sel[1]) begin
+    sn89s_ce_n <= 1'b0;
+  end
+  if (clk_en_2) begin
+    if (~sn89m_ce_n) begin
+      sn89m_we_n <= 1'b0;
+    end
+    if (~sn89s_ce_n) begin
+      sn89s_we_n <= 1'b0;
+    end
+    if (~sn89m_we_n & ~sn89m_we_n) begin
+      sn89m_ce_n <= 1'b1;
+      sn89m_we_n <= 1'b1;
+    end
+    if (~sn89s_we_n & ~sn89s_we_n) begin
+      sn89s_ce_n <= 1'b1;
+      sn89s_we_n <= 1'b1;
+    end
+  end
+end
 
-jt89 jt89_1(
-  .clk    ( clk_sys     ),
-  .clk_en ( clk_en_2    ),
-  .rst    ( reset       ),
-  .wr_n   ( jt89_1_wr_n ),
-  .din    ( sn89_data   ),
-  .sound  ( sound1      ),
-  .ready  ( sn89_1_rdy  )
+assign sound1 = music_out[13:4];
+assign sound2 = sound_out[13:4];
+wire [13:0] music_out;
+wire [13:0] sound_out;
+
+sn76489_audio music(
+  .clk_i       ( clk_sys    ),
+  .en_clk_psg_i( clk_en_2   ),
+  .ce_n_i      ( sn89m_ce_n ),
+  .wr_n_i      ( sn89m_we_n ),
+  .ready_o     ( sn89_1_rdy ),
+  .data_i      ( sn89_data  ),
+  .mix_audio_o ( music_out  )
 );
 
-jt89 jt89_2(
-  .clk    ( clk_sys     ),
-  .clk_en ( clk_en_2    ),
-  .rst    ( reset       ),
-  .wr_n   ( jt89_2_wr_n ),
-  .din    ( sn89_data   ),
-  .sound  ( sound2      ),
-  .ready  ( sn89_2_rdy  )
+sn76489_audio soundfx(
+  .clk_i        ( clk_sys    ),
+  .en_clk_psg_i ( clk_en_2   ),
+  .ce_n_i       ( sn89s_ce_n ),
+  .wr_n_i       ( sn89s_we_n ),
+  .ready_o      ( sn89_2_rdy ),
+  .data_i       ( sn89_data  ),
+  .mix_audio_o  ( sound_out  )
 );
 
 

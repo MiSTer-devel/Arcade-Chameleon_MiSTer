@@ -24,10 +24,10 @@
 	<joystick>8-way</joystick>
 	<special_controls></special_controls>
 	<num_buttons>2</num_buttons>
-	<buttons names="Start 1P, Start 2P, Coin A, Coin B" default="Start,Select,A,B"></buttons>
+	<buttons names="1P Start, A Button + 2P Start, Coin A, Coin B" default="Start,Select,A,B"></buttons>
 
 	<switches default="00,00">
-		<dip bits="0" name="Cabinet" ids="Upright,Cocktail"/>
+		<dip bits="0" name="Cabinet" ids="Cocktail,Upright"/>
 		<dip bits="1,2,3" name="CoinA" ids="1C_1C,2C_1C,1C_3C,1C_2C,1C_6C"/>
 		<dip bits="4,5" name="Lives" ids="3,?,Inf,5"/>
 		<dip bits="6" name="CoinB" ids="1C_1C,2C_1C"/>
