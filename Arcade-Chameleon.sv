@@ -202,16 +202,20 @@ localparam CONF_STR = {
   "Chameleon;;",
   "-;",
   "O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-  "O[2],TV Mode,NTSC,PAL;",
-  "O[4:3],Noise,White,Red,Green,Blue;",
   "-;",
   "DIP;",
+  "-;",
+  "OOS,Analog Video H-Pos,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31;",
+  "OTV,Analog Video V-Pos,0,1,2,3,4,5,6,7;",
   "-;",
   "O[7:6],Audio,Both,Fx,Music,None;",
   "T[0],Reset;",
   "R[0],Reset and close OSD;",
   "V,v",`BUILD_DATE
 };
+
+wire [4:0] HOFFS = status[28:24];
+wire [2:0] VOFFS = status[31:29];
 
 wire forced_scandoubler;
 wire   [1:0] buttons;
@@ -298,7 +302,9 @@ video video(
   .hb     ( HBlank  ),
   .vb     ( VBlank  ),
   .hcount ( hcount  ),
-  .vcount ( vcount  )
+  .vcount ( vcount  ),
+  .hoffs  ( HOFFS   ),
+  .voffs  ( VOFFS   )
 );
 
 /******** VRAM FRAME BUFFERS ********/

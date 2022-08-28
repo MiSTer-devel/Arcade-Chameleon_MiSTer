@@ -7,7 +7,9 @@ module video(
   output reg vb,
   output reg [8:0] hcount,
   output reg [8:0] vcount,
-  output reg frame
+  output reg frame,
+  input [4:0] hoffs,
+  input [2:0] voffs
 );
 
 
@@ -24,15 +26,15 @@ always @(posedge clk) begin
     256: hb <= 1'b1;
     274: hs <= 1'b0;
     299: hs <= 1'b1;
-    442: begin
+    442-hoffs: begin
       vcount <= vcount + 9'd1;
       hcount <= 9'b0;
       case (vcount)
-         16: vb <= 1'b0;
+         15: vb <= 1'b0;
         239: vb <= 1'b1;
         242: vs <= 1'b0;
         245: vs <= 1'b1;
-        262: vcount <= 9'd0;
+        262+voffs: vcount <= 9'd0;
       endcase
     end
   endcase

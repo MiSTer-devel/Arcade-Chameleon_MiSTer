@@ -1,7 +1,9 @@
-# Jaleco Chameleon for MiSTer
+# Jaleco Chameleon for MiSTerFPGA
 
-Work in progress.
+A game from Jaleco procuded in 1983. This is a beta port for MiSTerFPGA by Pierco. I did it for fun on my phone during my vacations.
 
-ToDo:
-- The video module requires one additionnal vertical row and image is offset to the right on CRT.
-- Nice to have: replace the current CPU with a more accurate one, the chip_6502!!
+## Tasks for a stable release
+
+- fix video timings: image appears on the right on CRT screens! I added a H-Pos setting in OSD.
+- fix joysticks, they are weird for now, a better mapping is possible
+
