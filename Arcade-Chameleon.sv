@@ -286,7 +286,7 @@ wire VSync;
 wire [8:0] hcount, vcount;
 
 wire clk_vid;
-clk_en #(5) clk_en_main(clk_sys, clk_vid);
+clk_en #(7) clk_en_main(clk_sys, clk_vid);
 
 assign CLK_VIDEO = clk_sys;
 assign CE_PIXEL = clk_vid;

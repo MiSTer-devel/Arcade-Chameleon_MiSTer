@@ -12,7 +12,6 @@ module video(
   input [2:0] voffs
 );
 
-
 initial begin
   hs <= 1'b1;
   vs <= 1'b1;
@@ -22,19 +21,19 @@ always @(posedge clk) begin
   frame <= 1'b0;
   hcount <= hcount + 9'd1;
   case (hcount)
-    0: hb <= 1'b0;
+    1: hb <= 1'b0;
     256: hb <= 1'b1;
-    274: hs <= 1'b0;
-    299: hs <= 1'b1;
-    442-hoffs: begin
+    271: hs <= 1'b0;
+    295: hs <= 1'b1;
+    335-hoffs: begin
       vcount <= vcount + 9'd1;
       hcount <= 9'b0;
       case (vcount)
          15: vb <= 1'b0;
         239: vb <= 1'b1;
-        242: vs <= 1'b0;
-        245: vs <= 1'b1;
-        262+voffs: vcount <= 9'd0;
+        249: vs <= 1'b0;
+        252: vs <= 1'b1;
+        272+voffs: vcount <= 9'd0;
       endcase
     end
   endcase
